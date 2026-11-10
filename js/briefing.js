@@ -11,7 +11,8 @@
   let timer = null, music = null;
   if (synth) { try { synth.getVoices(); } catch (e) { /* voices load lazily in some browsers */ } }
 
-  /* ── ambient score: a low detuned drone with sparse, echoing bell tones ── */
+  /* ── ambient score: a dissonant drone, a quickening heartbeat, a clock tick,
+     trembling high strings and echoing bell tones ── */
   function startMusic() {
     if (!AC) return null;
     let ctx;
@@ -26,12 +27,12 @@
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass'; filter.frequency.value = 260; filter.Q.value = 6;
     const lfo = ctx.createOscillator(), lfoGain = ctx.createGain();
-    lfo.frequency.value = 0.07; lfoGain.gain.value = 140;
+    lfo.frequency.value = 0.13; lfoGain.gain.value = 170;
     lfo.connect(lfoGain); lfoGain.connect(filter.frequency); lfo.start();
     const droneGain = ctx.createGain(); droneGain.gain.value = 0.16;
     filter.connect(droneGain); droneGain.connect(master);
     const nodes = [lfo];
-    [[55, 'sawtooth', 1], [55.5, 'sawtooth', 1], [82.4, 'sine', 0.8], [27.5, 'sine', 1.2]].forEach(d => {
+    [[55, 'sawtooth', 1], [55.6, 'sawtooth', 1], [77.78, 'sawtooth', 0.55], [27.5, 'sine', 1.2]].forEach(d => {
       const o = ctx.createOscillator(), g = ctx.createGain();
       o.type = d[1]; o.frequency.value = d[0]; g.gain.value = d[2];
       o.connect(g); g.connect(filter); o.start(); nodes.push(o);
@@ -49,19 +50,53 @@
       o.connect(g); g.connect(master); g.connect(delay);
       o.start(at); o.stop(at + 2.8);
     };
-    const NOTES = [220, 261.63, 311.13, 329.63, 415.3, 440, 622.25];   // A minor with a tritone for unease
+    // Trembling high cluster a semitone apart, creeping in over the first 20 seconds.
+    const strings = ctx.createGain(), trem = ctx.createOscillator(), tremGain = ctx.createGain();
+    strings.gain.setValueAtTime(0.0001, t0); strings.gain.exponentialRampToValueAtTime(0.03, t0 + 20);
+    trem.frequency.value = 7; tremGain.gain.value = 0.012;
+    trem.connect(tremGain); tremGain.connect(strings.gain); trem.start(); nodes.push(trem);
+    strings.connect(master); strings.connect(delay);
+    [466.16, 493.88, 932.33].forEach((f, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'triangle'; o.frequency.value = f; g.gain.value = i === 2 ? 0.35 : 1;
+      o.connect(g); g.connect(strings); o.start(); nodes.push(o);
+    });
+    // Heartbeat: a low double thump that gradually quickens.
+    const thump = (at, level) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.setValueAtTime(70, at); o.frequency.exponentialRampToValueAtTime(38, at + 0.16);
+      g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(level, at + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.28);
+      o.connect(g); g.connect(master); o.start(at); o.stop(at + 0.32);
+    };
+    // Clock tick on the half second.
+    const tick = at => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'square'; o.frequency.value = 1900;
+      g.gain.setValueAtTime(0.018, at); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.03);
+      o.connect(g); g.connect(master); o.start(at); o.stop(at + 0.04);
+    };
+    let alive = true, gap = 1.25;
+    const beat = () => {
+      if (!alive) return;
+      const t = ctx.currentTime + 0.03;
+      thump(t, 0.55); thump(t + 0.2, 0.38); tick(t); tick(t + gap / 2);
+      gap = Math.max(0.72, gap * 0.985);
+      setTimeout(beat, gap * 1000);
+    };
+    setTimeout(beat, 1200);
+    const NOTES = [220, 233.08, 311.13, 329.63, 415.3, 466.16, 622.25];   // semitone and tritone clashes for unease
     let last = -1;
     const pluck = () => {
       let i; do { i = Math.floor(Math.random() * NOTES.length); } while (i === last);
       last = i; bell(NOTES[i], ctx.currentTime + 0.05, 0.07);
     };
-    const loop = setInterval(pluck, 2700);
+    const loop = setInterval(pluck, 1900);
     setTimeout(pluck, 900);
 
     return {
       sting() { const t = ctx.currentTime + 0.05; [110, 164.81, 220, 329.63].forEach((f, i) => bell(f, t + i * 0.09, 0.09)); },
       stop(fade) {
-        clearInterval(loop);
+        clearInterval(loop); alive = false;
         const t = ctx.currentTime;
         try { master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(Math.max(master.gain.value, 0.0001), t); master.gain.exponentialRampToValueAtTime(0.0001, t + fade); } catch (e) { /* context closing */ }
         setTimeout(() => { nodes.forEach(n => { try { n.stop(); } catch (e) { /* already stopped */ } }); if (ctx.close) ctx.close().catch(() => {}); }, fade * 1000 + 150);
@@ -119,7 +154,7 @@
       sentences.forEach((text, k) => {
         const u = new SpeechSynthesisUtterance(text.trim());
         if (voice) { u.voice = voice; u.lang = voice.lang; } else u.lang = 'en-GB';
-        u.rate = 0.92; u.pitch = 0.75; u.volume = 1;
+        u.rate = 0.78; u.pitch = 0.7; u.volume = 1;
         u.onstart = () => { if (my !== session) return; started = true; speaking = true; idx = Math.max(idx, starts[k]); cap = starts[k] + text.length; };
         u.onboundary = e => { if (my === session && e.charIndex != null) idx = Math.max(idx, Math.min(cap, starts[k] + e.charIndex)); };
         const last = k === sentences.length - 1;
@@ -137,7 +172,7 @@
     let carry = 0;
     timer = setInterval(() => {
       if (my !== session) return clearInterval(timer);
-      carry += (speaking ? 15 : 42) * 0.03;           // characters per 30 ms tick
+      carry += (speaking ? 12.5 : 32) * 0.03;           // characters per 30 ms tick
       const step = Math.floor(carry); carry -= step;
       idx = Math.min(cap, idx + step);
       paint();
