@@ -10,6 +10,7 @@
     digital: '<rect x="3" y="4" width="13" height="10" rx="1.500"/><path d="M7 18h5M9.500 14v4"/><rect x="17" y="9" width="4.500" height="9" rx="1"/>',
     data: '<ellipse cx="12" cy="6" rx="7" ry="2.800"/><path d="M5 6v6c0 1.500 3.100 2.800 7 2.800s7-1.300 7-2.800V6M5 12v6c0 1.500 3.100 2.800 7 2.800s7-1.300 7-2.800v-6"/>',
     issuing: '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10.500h18M7 15h4"/>',
+    blockchain: '<path d="M12 6l5.200 3v6L12 18l-5.200-3V9z"/><path d="M12 12v6M6.800 9l5.200 3 5.200-3"/><circle cx="12" cy="2.800" r="1.500"/><circle cx="3.300" cy="17.500" r="1.500"/><circle cx="20.700" cy="17.500" r="1.500"/><path d="M12 4.300V6M4.600 16.700L6.800 15M19.400 16.700L17.200 15"/>',
     briefcase: '<rect x="3" y="7" width="18" height="12" rx="2"/><path d="M9 7V5h6v2M3 13h18"/>',
     globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.200 3 14.800 0 18M12 3c-3 3.200-3 14.800 0 18"/>',
     shield: '<path d="M12 3l8 3v6c0 4.500-3.400 7.800-8 9-4.600-1.200-8-4.500-8-9V6z"/><path d="M9 12l2 2 4-4"/>',

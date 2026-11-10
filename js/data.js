@@ -25,7 +25,8 @@
       { id: 'trade', name: 'Trade & Working Capital', icon: 'trade', active: true, blurb: 'Letters of credit, guarantees, supply chain and receivables finance.' },
       { id: 'digital', name: 'Digital Channels', icon: 'digital', active: true, blurb: 'Corporate portal, mobile, host-to-host and API connectivity.' },
       { id: 'data', name: 'Data', icon: 'data', active: true, blurb: 'Client insights, analytics platforms and regulatory data.' },
-      { id: 'issuing', name: 'Commercial Issuing', icon: 'issuing', active: true, blurb: 'Corporate, purchasing and virtual cards.' }
+      { id: 'issuing', name: 'Commercial Issuing', icon: 'issuing', active: true, blurb: 'Corporate, purchasing and virtual cards.' },
+      { id: 'digital-assets', name: 'Digital Assets', icon: 'blockchain', active: true, blurb: 'Tokenised deposits, digital asset custody and blockchain-based settlement.' }
     ],
 
     levels: [
@@ -109,7 +110,11 @@
       { id: 's-data', portfolio: 'data', active: true, title: 'Insights Clients Will Pay For', client: 'Meridian Manufacturing', initiative: 'Cash-Flow Forecasting Insights',
         brief: 'Meridian Manufacturing wants predictive cash-flow forecasts built from its transaction history. The data sits in eleven product systems with inconsistent definitions, and regulators expect full lineage and client-consent controls on every data set.' },
       { id: 's-issuing', portfolio: 'issuing', active: true, title: 'Virtual Cards at Scale', client: 'Summit Travel Partners', initiative: 'Virtual Cards for B2B Payments',
-        brief: 'Summit Travel Partners wants to generate single-use virtual cards for every supplier booking — millions a year — with spend controls and automatic reconciliation. The card processor is an external vendor on a quarterly release cycle, and fraud teams are nervous.' }
+        brief: 'Summit Travel Partners wants to generate single-use virtual cards for every supplier booking — millions a year — with spend controls and automatic reconciliation. The card processor is an external vendor on a quarterly release cycle, and fraud teams are nervous.' },
+      { id: 's-da-token', portfolio: 'digital-assets', active: true, title: 'Money That Never Sleeps', client: 'Atlas Energy Trading', initiative: 'Tokenised Deposit Settlement',
+        brief: 'Atlas Energy Trading settles commodity trades across three time zones and loses days of liquidity to cut-off times and weekends. They want tokenised deposits on a permissioned blockchain so that group entities can move money 24/7 with instant finality. The regulator has not finished its rulebook, the core ledger must stay the book of record, and finance, legal and operations have never run a product that settles on a Sunday.' },
+      { id: 's-da-custody', portfolio: 'digital-assets', active: true, title: 'Keys to the Vault', client: 'Polaris Mobility', initiative: 'Institutional Digital Asset Custody',
+        brief: 'Polaris Mobility\u2019s treasury wants to hold tokenised money-market funds and regulated stablecoins, and will only do so with its house bank as custodian. The bank must safeguard private keys, segregate client assets and screen every on-chain transfer for financial crime. Key-management technology comes from a specialist vendor, and a lost or stolen key cannot be reversed.' }
     ],
 
     questions: [
@@ -394,6 +399,38 @@
         o('Prioritise it: co-design the reconciliation data with Summit’s finance team and demo it with their real booking data', [12, 4, 2, 2], 'Automatic reconciliation is the client’s real job to be done. The card is only the means.'),
         o('Offer a spreadsheet template they can use to match manually', [-8, 0, 0, -2], 'A manual workaround at millions of transactions a year is a reason to choose another issuer.'),
         o('Defer it to a later phase — card creation was the PI objective', [-6, 0, 0, -2], 'Hitting the objective while missing the outcome is output thinking. Use the feedback to adjust the plan.')
+      ]),
+      // Digital assets — tokenised deposits
+      q('s-da-token', 'epic-review', 'Tokenised Deposit Settlement is new for the bank and for the regulator. How do you shape the epic for Atlas?', [
+        o('An MVP with one client group, one currency and low limits on a permissioned network, designed with the regulator informed and the core ledger kept as book of record', [10, 6, 8, 2], 'A tightly bounded MVP tests real client demand and operational readiness with limited exposure. Engaging the regulator early turns uncertainty into shared learning rather than a late veto.'),
+        o('Wait until regulation is final before investing anything', [-10, -4, 2, -4], 'Certainty will arrive after your competitors do. A small, supervised experiment builds the capability and informs the rules.'),
+        o('Launch a multi-currency token on a public blockchain to capture the market first', [2, -6, -14, -4], 'Scale and openness before controls are proven is far outside a bank’s risk appetite, and failures here are public and irreversible.')
+      ]),
+      q('s-da-token', 'pi-planning', 'Tokens move 24/7 but the core ledger, finance reconciliation and operations support run on business days. Teams raise this during planning.', [
+        o('Plan enablers with finance, operations and the core team: real-time reconciliation between chain and ledger, and a staffed 24/7 operating model, before raising limits', [4, 8, 10, 6], 'The token and the ledger must never disagree. Treating the operating model as part of the solution, planned with the people who run it, is what makes always-on settlement safe.'),
+        o('Go live 24/7 and reconcile to the ledger each morning', [4, 2, -14, -6], 'A weekend of unreconciled token movements is a weekend in which the bank does not know its own balance sheet.'),
+        o('Restrict token transfers to business hours', [-10, 2, 4, 0], 'Safe, but it removes the reason Atlas wants the product. Consider it only as a short, explicit first step with a plan to extend.')
+      ]),
+      q('s-da-token', 'system-demo', 'In the demo a token transfer settles instantly, but Atlas’s treasurer asks what happens if a payment is sent to the wrong entity — it cannot be recalled.', [
+        o('Add client-side controls to the backlog — approval workflows, allow-lists and limits — and agree an operational recovery process, then demo them', [8, 4, 10, 2], 'Finality is the feature and the risk. Preventive controls before sending, plus an agreed process between known counterparties, address it without breaking instant settlement.'),
+        o('Explain that irreversibility is how blockchain works', [-8, 0, -6, -2], 'True, and no comfort to a treasurer. The client is describing an unmet need, not asking for a lecture.'),
+        o('Add a 24-hour hold on every transfer so mistakes can be caught', [-10, -2, 4, -2], 'This rebuilds the delay the product exists to remove.')
+      ]),
+      // Digital assets — custody
+      q('s-da-custody', 'epic-review', 'Custody of digital assets depends on a specialist key-management vendor. What must the lean business case establish before funding?', [
+        o('That one asset type can be safeguarded end to end for a pilot client — including key ceremonies, asset segregation, recovery and vendor exit — proven in a test environment first', [8, 6, 12, 2], 'In custody, safekeeping is the product. Proving key management, recovery and exit on a narrow scope tests the riskiest assumptions before client assets are involved.'),
+        o('That the vendor is the market leader, so its controls can be relied on', [0, 2, -12, -2], 'Outsourcing the technology does not outsource the accountability. The bank must evidence the controls itself.'),
+        o('That the bank can support every major token clients might ask for', [-2, -10, -6, -6], 'Each asset has its own technical and legal risk profile. Breadth first multiplies risk before the core capability is proven.')
+      ]),
+      q('s-da-custody', 'pi-planning', 'Every on-chain transfer must be screened for sanctions and financial crime, but the bank’s screening tools do not understand wallet addresses.', [
+        o('Plan with the financial-crime team from day one: integrate blockchain analytics as an enabler and agree the policy for incoming funds from unknown wallets', [4, 6, 12, 4], 'New rails need controls designed for them. Working it out with the control owners during planning avoids a blocked go-live and gives them ownership of the answer.'),
+        o('Screen only the client, not the wallets, as with ordinary payments', [2, 4, -16, -2], 'On a blockchain the counterparty is a wallet. Not screening it leaves the bank blind to exactly the risk regulators care most about.'),
+        o('Have engineers build a simple wallet block-list themselves to keep the plan on track', [0, 2, -10, -2], 'A home-made control without the financial-crime function’s ownership will not stand up to audit — or to a determined criminal.')
+      ]),
+      q('s-da-custody', 'system-demo', 'The demo shows assets safely held. Polaris’s treasurer asks: "Show me what happens if your key vendor goes down, or a key is compromised."', [
+        o('Schedule a live recovery drill with operations and security, demo it next iteration, and make regular drills part of the Definition of Done', [8, 4, 12, 4], 'Resilience you have not rehearsed is a hope, not a control. Demonstrating recovery to the client is also the strongest sales argument a custodian has.'),
+        o('Share the vendor’s resilience documentation', [-4, 0, -6, 0], 'Paper assurance does not answer the question. The treasurer, and your regulator, want to see it work.'),
+        o('Say it is covered by insurance', [-6, 0, -8, -2], 'Insurance pays after the loss. Custody clients are buying the prevention.')
       ])
     ]
   };

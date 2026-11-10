@@ -13,11 +13,11 @@ No build step and no dependencies.
 
 | Area | Details |
 |---|---|
-| Portfolios | Payments, Liquidity Management, FX, Trade & Working Capital, Digital Channels, Data, Commercial Issuing |
+| Portfolios | Payments, Liquidity Management, FX, Trade & Working Capital, Digital Channels, Data, Commercial Issuing, Digital Assets |
 | Work breakdown | Team, Team of Teams (ART), Value Stream (Solution Train), Portfolio, ExCo |
 | Roles | 22 roles, filtered by level — Scrum Master, Product Owner, RTE, Product Manager, Epic Owner, Executive Sponsor and more |
 | Events | 15 events across a Planning Interval, from Strategy & OKR Alignment through PI Planning, team events, System and Solution Demos to Inspect & Adapt |
-| Scenarios | One fictional client scenario per portfolio, plus a shared question bank (49 questions in total) |
+| Scenarios | Fictional client scenarios for every portfolio (two for Digital Assets), plus a shared question bank (55 questions in total) |
 | Debrief | Overall score, the four measures, a printable plan and decision log, and retrospective prompts |
 
 Each participant meets only the events their level attends. Questions can be single choice, multi-select or free text (captured in the plan).
