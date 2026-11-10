@@ -71,6 +71,12 @@
     const queue = buildQueue(P().scenario, P().level);
     if (!queue.length) return toast('No questions are configured for this combination yet.');
     const metrics = {}; cfg.metrics.forEach(m => { metrics[m.id] = 50; });
+    // Shuffle the answer order for every question, afresh on each run.
+    queue.forEach(item => {
+      const order = (byId(cfg.questions, item.q).options || []).map((_, i) => i);
+      for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+      item.o = order;
+    });
     S.run = { queue, idx: 0, metrics, answers: [], revealed: false, saved: false };
     anim.metrics = null; anim.train = null; anim.event = null;
     go('play');
@@ -244,10 +250,12 @@
         : `<textarea id="q-text" rows="4" maxlength="600" placeholder="Type your answer as a team…"></textarea>`;
     } else {
       const best = q.options.reduce((b, o, i) => (total(o.impact) > total(q.options[b].impact) ? i : b), 0);
-      body = `<div class="opts ${ans ? 'locked' : ''}" role="${q.type === 'multi' ? 'group' : 'radiogroup'}">${q.options.map((o, i) => {
+      const order = item.o && item.o.length === q.options.length ? item.o : q.options.map((_, i) => i);
+      body = `<div class="opts ${ans ? 'locked' : ''}" role="${q.type === 'multi' ? 'group' : 'radiogroup'}">${order.map((i, pos) => {
+        const o = q.options[i];
         const on = ans && ans.picks.includes(i), good = ans && (q.type === 'multi' ? total(o.impact) > 0 : i === best);
         return `<button class="opt ${on ? 'on' : ''} ${ans && good ? 'best' : ''}" data-act="pick" data-i="${i}" data-multi="${q.type === 'multi' ? 1 : ''}" ${ans ? 'disabled' : ''} role="${q.type === 'multi' ? 'checkbox' : 'radio'}" aria-checked="${on ? 'true' : 'false'}">
-          <i class="mark">${String.fromCharCode(65 + i)}</i><span>${fill(o.text)}${ans && good ? '<em class="tag">Recommended practice</em>' : ''}${ans && on && !good ? '<em class="tag you">Your choice</em>' : ''}</span></button>`;
+          <i class="mark">${String.fromCharCode(65 + pos)}</i><span>${fill(o.text)}${ans && good ? '<em class="tag">Recommended practice</em>' : ''}${ans && on && !good ? '<em class="tag you">Your choice</em>' : ''}</span></button>`;
       }).join('')}</div>`;
       if (ans) {
         const t = total(ans.delta), cls = t >= 10 ? 'good' : t >= 0 ? 'mixed' : 'bad';
