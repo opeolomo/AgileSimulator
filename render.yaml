@@ -1,0 +1,18 @@
+# Render Blueprint — deploys the simulator as a free static site.
+services:
+  - type: web
+    name: agilesimulator
+    runtime: static
+    buildCommand: "true"        # nothing to build
+    staticPublishPath: .
+    autoDeploy: true
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: X-Frame-Options
+        value: SAMEORIGIN
+      - path: /config.json
+        name: Cache-Control
+        value: no-cache
