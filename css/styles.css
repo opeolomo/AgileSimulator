@@ -97,6 +97,14 @@ label.btn { cursor: pointer; }
 .tier b { font-size: 1.05rem; } .tier span { color: var(--accent); font-size: .85rem; }
 .tier small { grid-column: 1 / -1; color: var(--muted); }
 .brief { display: grid; gap: 6px; }
+.brief > .primary { justify-self: start; }
+.brief-text { min-height: 6.2em; font-size: 1.05rem; }
+.accept { min-height: 1.6em; font-weight: 700; color: var(--amber); letter-spacing: .01em; }
+.typing::after { content: "\258C"; margin-left: 2px; color: var(--accent); animation: blink .8s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.brief-ctl { margin-bottom: 6px; }
+.primary.ready { animation: beckon 1.6s ease-in-out infinite; }
+@keyframes beckon { 50% { box-shadow: 0 0 0 10px color-mix(in srgb, var(--accent) 0%, transparent); } 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); } }
 .itinerary { margin: 0 0 14px; padding-left: 22px; display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 4px 28px; }
 .itinerary small { display: block; color: var(--muted); }
 .chip { display: inline-flex; flex-direction: column; background: var(--surface2); border: 1px solid var(--line); border-radius: 10px; padding: 5px 12px; font-weight: 600; font-size: .9rem; line-height: 1.25; }

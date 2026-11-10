@@ -44,6 +44,7 @@ index.html        page shell
 css/styles.css    styling, light and dark themes, print layout
 js/data.js        default content (portfolios, roles, events, scenarios, questions)
 js/graphics.js    SVG icons and event-room illustrations
+js/briefing.js    mission-briefing sound, voice read-out and typewriter text
 js/app.js         simulation flow, scoring, debrief and admin module
 ```
 

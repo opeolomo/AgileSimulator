@@ -1,7 +1,7 @@
 /* Scaled Agile Simulator — application logic (no dependencies). */
 (function () {
   'use strict';
-  const G = window.AS_GFX, esc = G.esc, DEF = window.AS_DEFAULTS;
+  const G = window.AS_GFX, B = window.AS_BRIEF, esc = G.esc, DEF = window.AS_DEFAULTS;
   const KEY = { cfg: 'agileSim.config.v1', hist: 'agileSim.history.v1', ses: 'agileSim.session.v1', theme: 'agileSim.theme' };
   const $ = (s, el) => (el || document).querySelector(s);
   const $$ = (s, el) => Array.from((el || document).querySelectorAll(s));
@@ -153,6 +153,14 @@
 
   /* ───────────── setup wizard ───────────── */
   const STEPS = ['Portfolio', 'Level', 'Role', 'Scenario'];
+  const ACCEPT = 'If you wish to accept this mission, click on Board the train.';
+  const onBriefing = () => S.view === 'setup' && S.step === 3 && !!sel().scenario;
+  function playBrief() {
+    if (!onBriefing()) return;
+    const btn = $('[data-act="start"]'); if (btn) btn.classList.remove('ready');
+    B.start({ body: sel().scenario.brief || '', closing: ACCEPT, bodyEl: '#brief-text', closingEl: '#brief-accept',
+      onDone() { const b = $('[data-act="start"]'); if (b && !b.disabled) b.classList.add('ready'); } });
+  }
   function vSetup() {
     const s = sel(), step = S.step;
     const done = [!!s.portfolio, !!s.level, !!s.role, !!s.scenario];
@@ -183,7 +191,10 @@
         ${s.scenario ? `<div class="brief card">
           <p class="eyebrow">Mission briefing</p><h3>${esc(s.scenario.title)}</h3>
           <div class="row wrap">${chip('Client', s.scenario.client || '—')}${chip('Initiative', s.scenario.initiative || '—')}${chip('You are', s.role.name)}${chip('Level', s.level.name)}</div>
-          <p>${esc(s.scenario.brief || '')}</p>
+          <p id="brief-text" class="brief-text">${esc(s.scenario.brief || '')}</p>
+          <p id="brief-accept" class="accept">${ACCEPT}</p>
+          <div class="row wrap brief-ctl"><button class="mini" data-act="brief-play">▶ Replay briefing</button>
+            <button class="mini" data-act="brief-sound" aria-pressed="${B.enabled}">Sound: ${B.enabled ? 'on' : 'off'}</button></div>
           <h4>Your itinerary — ${evs.length} events, ${queue.length} decisions</h4>
           <ol class="itinerary">${evs.map(e => `<li><b>${esc(e.name)}</b><small>${esc(e.cadence || '')}</small></li>`).join('')}</ol>
           <button class="primary big" data-act="start" ${queue.length ? '' : 'disabled'}>Board the train</button>
@@ -504,6 +515,7 @@
   /* ───────────── render ───────────── */
   function render(top) {
     const views = { home: vHome, setup: vSetup, play: vPlay, debrief: vDebrief, admin: vAdmin };
+    if (!onBriefing()) B.stop();
     $('#app').innerHTML = header() + `<main id="main">${(views[S.view] || vHome)()}</main>`;
     store.set(KEY.ses, S, sessionStorage);
     if (top) window.scrollTo(0, 0);
@@ -525,7 +537,12 @@
     },
     begin() { S.run = null; go('setup', 0); },
     resume() { go('play'); },
-    step(el) { go('setup', clamp(+el.dataset.id, 0, 3)); },
+    step(el) { go('setup', clamp(+el.dataset.id, 0, 3)); playBrief(); },
+    'brief-play'() { playBrief(); },
+    'brief-sound'(el) {
+      const on = B.toggle(); el.textContent = 'Sound: ' + (on ? 'on' : 'off'); el.setAttribute('aria-pressed', on);
+      if (on) playBrief(); else toast('Sound off — the briefing will type silently.');
+    },
     'set-portfolio'(el) {
       if (P().portfolio !== el.dataset.id) P().scenario = null;
       P().portfolio = el.dataset.id; go('setup', 1);
@@ -538,9 +555,9 @@
       P().role = el.dataset.id;
       const list = scenariosFor(P().portfolio);
       if (!byId(list, P().scenario)) P().scenario = list[0] ? list[0].id : null;
-      go('setup', 3);
+      go('setup', 3); playBrief();
     },
-    'set-scenario'(el) { P().scenario = el.dataset.id; render(); },
+    'set-scenario'(el) { P().scenario = el.dataset.id; render(); playBrief(); },
     start() { startRun(); },
     pick(el) {
       if (el.dataset.multi) el.classList.toggle('on');
