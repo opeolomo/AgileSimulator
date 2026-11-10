@@ -141,9 +141,9 @@
       <div class="hero-art">${G.hero()}</div>
     </section>
     <section class="steps3">
-      <article><span class="num">1</span><h3>Set the scene</h3><p>Pick one of ${cfg.portfolios.filter(p => p.active !== false).length} portfolios, where you sit — from Team to ExCo — and the role you play.</p></article>
-      <article><span class="num">2</span><h3>Plan through the events</h3><p>Board the train. Each station is an agile event with decisions to make as a team, questionnaire style.</p></article>
-      <article><span class="num">3</span><h3>Debrief together</h3><p>See your scores, the reasoning behind every option and a decision log you can print for the retrospective.</p></article>
+      <article><span class="stepnum">1</span><h3>Set the scene</h3><p>Pick one of ${cfg.portfolios.filter(p => p.active !== false).length} portfolios, where you sit — from Team to ExCo — and the role you play.</p></article>
+      <article><span class="stepnum">2</span><h3>Plan through the events</h3><p>Board the train. Each station is an agile event with decisions to make as a team, questionnaire style.</p></article>
+      <article><span class="stepnum">3</span><h3>Debrief together</h3><p>See your scores, the reasoning behind every option and a decision log you can print for the retrospective.</p></article>
     </section>
     ${hist.length ? `<section class="card"><h3>Recent runs on this device</h3><div class="table-wrap"><table><thead><tr><th>When</th><th>Team</th><th>Portfolio</th><th>Level / role</th><th>Scenario</th><th class="num">Score</th></tr></thead><tbody>
       ${hist.slice(0, 5).map(h => `<tr><td>${esc(new Date(h.at).toLocaleDateString())}</td><td>${esc(h.team || '—')}</td><td>${esc(h.portfolio)}</td><td>${esc(h.level)} · ${esc(h.role)}</td><td>${esc(h.scenario)}</td><td class="num">${h.score}</td></tr>`).join('')}
