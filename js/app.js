@@ -67,6 +67,12 @@
       .replace(/\{portfolio\}/g, esc(s.portfolio ? s.portfolio.name : 'your'));
   }
   const total = imp => cfg.metrics.reduce((a, m) => a + (+imp[m.id] || 0), 0);
+  const bestIndex = q => q.options.reduce((b, o, i) => (total(o.impact) > total(q.options[b].impact) ? i : b), 0);
+  function isCorrect(q, picks) {
+    if (q.type !== 'multi') return picks.length === 1 && picks[0] === bestIndex(q);
+    const good = q.options.map((o, i) => (total(o.impact) > 0 ? i : -1)).filter(i => i >= 0);
+    return good.length === picks.length && good.every(i => picks.includes(i));
+  }
   function startRun() {
     const queue = buildQueue(P().scenario, P().level);
     if (!queue.length) return toast('No questions are configured for this combination yet.');
@@ -90,7 +96,11 @@
     } else {
       ans.picks = $$('.opt.on').map(el => +el.dataset.i);
       if (!ans.picks.length) return;
+      // A first answer that is not the recommended one earns a second attempt.
+      if (!run.retry && !isCorrect(q, ans.picks)) { run.retry = { picks: ans.picks }; return render(); }
+      if (run.retry) { ans.first = run.retry.picks; ans.attempts = 2; run.retry = null; }
       ans.picks.forEach(i => cfg.metrics.forEach(m => { ans.delta[m.id] += +q.options[i].impact[m.id] || 0; }));
+      if (ans.attempts === 2) cfg.metrics.forEach(m => { if (ans.delta[m.id] > 0) ans.delta[m.id] = Math.round(ans.delta[m.id] / 2); });
       cfg.metrics.forEach(m => { ans.delta[m.id] = clamp(ans.delta[m.id], -20, 20); });
     }
     anim.metrics = Object.assign({}, run.metrics);
@@ -100,7 +110,7 @@
   }
   function nextQuestion() {
     const run = S.run;
-    run.revealed = false; run.idx++;
+    run.revealed = false; run.retry = null; run.idx++;
     anim.metrics = null;
     if (run.idx >= run.queue.length) { saveHistory(); go('debrief'); } else render(true);
   }
@@ -179,14 +189,16 @@
           <span class="pick-ico">${G.icon(p.icon, 28)}</span><b>${esc(p.name)}</b><small>${esc(p.blurb || '')}</small></button>`).join('') || '<p class="empty">No portfolios are available. Ask your admin to add one.</p>'}</div>`;
     } else if (step === 1) {
       const lv = cfg.levels.slice().reverse(), n = lv.length;
-      body = `<h2>Where do you sit in the work breakdown?</h2><p class="sub">Strategy flows down; value and feedback flow up. Pick the level you work at.</p>
-        <div class="pyramid">${lv.map((l, i) => `<button class="tier ${l.id === P().level ? 'on' : ''}" style="--w:${n > 1 ? 46 + (54 * i) / (n - 1) : 100}%" data-act="set-level" data-id="${esc(l.id)}">
-          <b>${esc(l.name)}</b><span>${esc(l.alias || '')}</span><small>${esc(l.blurb || '')}</small></button>`).join('')}</div>`;
+      body = `<h2>Where do you sit in the work breakdown?</h2><p class="sub">Strategy flows down; value and feedback flow up. Pick the level you work at, or use Learn more to see what each one is about.</p>
+        <div class="pyramid">${lv.map((l, i) => `<div class="tier ${l.id === P().level ? 'on' : ''}" style="--w:${n > 1 ? 46 + (54 * i) / (n - 1) : 100}%"><button class="tier-main" data-act="set-level" data-id="${esc(l.id)}">
+          <b>${esc(l.name)}</b><span>${esc(l.alias || '')}</span><small>${esc(l.blurb || '')}</small></button>
+          <button class="mini more" data-act="learn" data-kind="levels" data-id="${esc(l.id)}" aria-label="Learn more about ${esc(l.name)}">Learn more</button></div>`).join('')}</div>`;
     } else if (step === 2) {
       const roles = cfg.roles.filter(r => r.levels.includes(P().level));
-      body = `<h2>What is your role at ${esc(s.level ? s.level.name : '')} level?</h2>
-        <div class="grid cards">${roles.map(r => `<button class="pick ${r.id === P().role ? 'on' : ''}" data-act="set-role" data-id="${esc(r.id)}">
-          <span class="pick-ico round">${esc((r.short || r.name).split(/\s+/).map(w => w[0]).join('').slice(0, 3).toUpperCase())}</span><b>${esc(r.name)}</b><small>${esc(r.blurb || '')}</small></button>`).join('') || '<p class="empty">No roles are configured for this level yet.</p>'}</div>`;
+      body = `<h2>What is your role at ${esc(s.level ? s.level.name : '')} level?</h2><p class="sub">Not sure? Learn more shows what each role does and which events it attends.</p>
+        <div class="grid cards">${roles.map(r => `<div class="pick ${r.id === P().role ? 'on' : ''}"><button class="pick-main" data-act="set-role" data-id="${esc(r.id)}">
+          <span class="pick-ico round">${esc((r.short || r.name).split(/\s+/).map(w => w[0]).join('').slice(0, 3).toUpperCase())}</span><b>${esc(r.name)}</b><small>${esc(r.blurb || '')}</small></button>
+          <button class="mini more" data-act="learn" data-kind="roles" data-id="${esc(r.id)}" aria-label="Learn more about ${esc(r.name)}">Learn more</button></div>`).join('') || '<p class="empty">No roles are configured for this level yet.</p>'}</div>`;
     } else {
       const list = scenariosFor(P().portfolio);
       const queue = s.scenario ? buildQueue(s.scenario.id, P().level) : [];
@@ -249,20 +261,36 @@
       body = ans ? `<div class="fb neutral"><b>Captured in your plan</b><p>${ans.text ? esc(ans.text) : '<em>Skipped.</em>'}</p></div>`
         : `<textarea id="q-text" rows="4" maxlength="600" placeholder="Type your answer as a team…"></textarea>`;
     } else {
-      const best = q.options.reduce((b, o, i) => (total(o.impact) > total(q.options[b].impact) ? i : b), 0);
+      const best = bestIndex(q), multi = q.type === 'multi';
       const order = item.o && item.o.length === q.options.length ? item.o : q.options.map((_, i) => i);
-      body = `<div class="opts ${ans ? 'locked' : ''}" role="${q.type === 'multi' ? 'group' : 'radiogroup'}">${order.map((i, pos) => {
+      const retry = !ans && run.retry ? run.retry.picks : null;
+      const first = ans && ans.first ? ans.first : [];
+      body = `<div class="opts ${ans ? 'locked' : ''}" role="${multi ? 'group' : 'radiogroup'}">${order.map((i, pos) => {
         const o = q.options[i];
-        const on = ans && ans.picks.includes(i), good = ans && (q.type === 'multi' ? total(o.impact) > 0 : i === best);
-        return `<button class="opt ${on ? 'on' : ''} ${ans && good ? 'best' : ''}" data-act="pick" data-i="${i}" data-multi="${q.type === 'multi' ? 1 : ''}" ${ans ? 'disabled' : ''} role="${q.type === 'multi' ? 'checkbox' : 'radio'}" aria-checked="${on ? 'true' : 'false'}">
-          <i class="mark">${String.fromCharCode(65 + pos)}</i><span>${fill(o.text)}${ans && good ? '<em class="tag">Recommended practice</em>' : ''}${ans && on && !good ? '<em class="tag you">Your choice</em>' : ''}</span></button>`;
+        const on = ans && ans.picks.includes(i), good = ans && (multi ? total(o.impact) > 0 : i === best);
+        const struck = !multi && retry && retry.includes(i);
+        const tag = ans && good ? '<em class="tag">Recommended practice</em>' : ans && on ? '<em class="tag you">Your choice</em>'
+          : struck || (ans && first.includes(i)) ? '<em class="tag you">Your first choice</em>' : '';
+        return `<button class="opt ${on ? 'on' : ''} ${ans && good ? 'best' : ''} ${struck ? 'wrong' : ''}" data-act="pick" data-i="${i}" data-multi="${multi ? 1 : ''}" ${ans || struck ? 'disabled' : ''} role="${multi ? 'checkbox' : 'radio'}" aria-checked="${on ? 'true' : 'false'}">
+          <i class="mark">${String.fromCharCode(65 + pos)}</i><span>${fill(o.text)}${tag}</span></button>`;
       }).join('')}</div>`;
+      if (retry) {
+        let why;
+        if (multi) {
+          const bad = retry.filter(i => total(q.options[i].impact) <= 0);
+          const missed = q.options.some((o, i) => total(o.impact) > 0 && !retry.includes(i));
+          why = bad.map(i => `<p><b>${fill(q.options[i].text)}:</b> ${fill(q.options[i].feedback)}</p>`).join('')
+            + (missed ? '<p>You also left out at least one practice that belongs here.</p>' : '');
+        } else why = `<p>${fill(q.options[retry[0]].feedback)}</p>`;
+        body += `<div class="fb mixed" tabindex="-1" id="fb"><b>↺ Not the strongest option — you have one more attempt</b>${why}<p class="fine">A second attempt earns half credit.</p></div>`;
+      }
       if (ans) {
-        const t = total(ans.delta), cls = t >= 10 ? 'good' : t >= 0 ? 'mixed' : 'bad';
-        const verdict = t >= 10 ? '✓ Strong call' : t >= 0 ? '◐ Workable, with trade-offs' : '✕ Costly choice';
-        const picked = ans.picks.map(i => `<p>${q.type === 'multi' ? '<b>' + fill(q.options[i].text) + ':</b> ' : ''}${fill(q.options[i].feedback)}</p>`).join('');
-        const better = q.type === 'single' && !ans.picks.includes(best) ? `<p class="better"><b>Stronger play — ${fill(q.options[best].text)}.</b> ${fill(q.options[best].feedback)}</p>` : '';
-        body += `<div class="fb ${cls}" tabindex="-1" id="fb"><b>${verdict}</b>${picked}${better}</div>`;
+        const t = total(ans.delta), right = isCorrect(q, ans.picks), second = ans.attempts === 2;
+        const cls = right ? 'good' : t >= 0 ? 'mixed' : 'bad';
+        const verdict = right ? (second ? '✓ Got there on the second attempt' : '✓ Strong call') : t >= 0 ? '◐ Workable, with trade-offs' : '✕ Costly choice';
+        const picked = ans.picks.map(i => `<p>${multi ? '<b>' + fill(q.options[i].text) + ':</b> ' : ''}${fill(q.options[i].feedback)}</p>`).join('');
+        const better = !multi && !right ? `<p class="better"><b>Stronger play — ${fill(q.options[best].text)}.</b> ${fill(q.options[best].feedback)}</p>` : '';
+        body += `<div class="fb ${cls}" tabindex="-1" id="fb"><b>${verdict}</b>${picked}${better}${second ? '<p class="fine">Second attempt: positive impact is halved.</p>' : ''}</div>`;
       }
     }
     const last = run.idx === run.queue.length - 1;
@@ -292,7 +320,7 @@
           <div class="row between">
             <button class="ghost" data-act="quit">Leave run</button>
             ${ans ? `<button class="primary" data-act="next" id="next">${last ? 'See the debrief' : 'Continue'}</button>`
-              : `<button class="primary" data-act="confirm" id="confirm" ${q.type === 'text' ? '' : 'disabled'}>${q.type === 'text' ? 'Save answer' : 'Lock in decision'}</button>`}
+              : `<button class="primary" data-act="confirm" id="confirm" ${q.type === 'text' ? '' : 'disabled'}>${q.type === 'text' ? 'Save answer' : run.retry ? 'Lock in second attempt' : 'Lock in decision'}</button>`}
           </div>
         </article>
       </div>
@@ -323,10 +351,10 @@
       if (q.type === 'text') return `<div class="log-q"><p class="lq">${fill(q.prompt)}</p><p class="la note">${a.text ? esc(a.text) : '<em>Skipped</em>'}</p></div>`;
       const t = total(a.delta), cls = t >= 10 ? 'good' : t >= 0 ? 'mixed' : 'bad';
       return `<div class="log-q"><p class="lq">${fill(q.prompt)}</p>
-        <p class="la ${cls}"><b>${t >= 10 ? '✓' : t >= 0 ? '◐' : '✕'}</b> ${a.picks.map(i => q.options[i] ? fill(q.options[i].text) : '').join('; ')}
+        <p class="la ${cls}"><b>${t >= 10 ? '✓' : t >= 0 ? '◐' : '✕'}</b> ${a.picks.map(i => q.options[i] ? fill(q.options[i].text) : '').join('; ')}${a.attempts === 2 ? ' <em>(second attempt)</em>' : ''}
         <span class="deltas">${cfg.metrics.filter(m => a.delta[m.id]).map(m => `${esc(m.name)} ${a.delta[m.id] > 0 ? '+' : '−'}${Math.abs(a.delta[m.id])}`).join(' · ')}</span></p></div>`;
     }).join('')}</div>`).join('');
-    const strong = run.answers.filter(a => total(a.delta) >= 10).length;
+    const strong = run.answers.filter(a => { const q = byId(cfg.questions, a.q); return q && a.picks.length && a.attempts !== 2 && isCorrect(q, a.picks); }).length;
     const scored = run.answers.filter(a => a.picks.length).length;
     return `<section class="debrief">
       <div class="card result">
@@ -337,7 +365,7 @@
         </svg>
         <div><p class="eyebrow">Debrief · ${esc(s.scenario.title)}${P().team ? ' · ' + esc(P().team) : ''}</p>
           <h1>${tier[0]}</h1><p class="lede">${esc(tier[1])}</p>
-          <div class="row wrap">${chip('Portfolio', s.portfolio.name)}${chip('Level', s.level.name)}${chip('Role', s.role.name)}${chip('Strong calls', strong + ' of ' + scored)}</div></div>
+          <div class="row wrap">${chip('Portfolio', s.portfolio.name)}${chip('Level', s.level.name)}${chip('Role', s.role.name)}${chip('Right first time', strong + ' of ' + scored)}</div></div>
       </div>
       <div class="card"><h3>Where you finished <small>(every measure starts at 50)</small></h3>${meters(run.metrics)}
         <div class="grid two insights">
@@ -364,10 +392,10 @@
       fields: [{ k: 'title', l: 'Title', req: 1 }, { k: 'portfolio', l: 'Portfolio', t: 'select', opts: optAll(() => cfg.portfolios, 'name', 'All portfolios'), def: '*' }, { k: 'client', l: 'Client name (fills {client})' }, { k: 'initiative', l: 'Initiative name (fills {initiative})' }, { k: 'brief', l: 'Mission briefing', t: 'textarea' }, { k: 'active', l: 'Available for selection', t: 'bool', def: true }] },
     roles: { title: 'Roles', one: 'role', prefix: 'rl', help: 'Agile roles, and the levels at which each can be selected.',
       cols: [['name', 'Name'], ['levels', 'Levels']],
-      fields: [{ k: 'name', l: 'Name', req: 1 }, { k: 'short', l: 'Short label (shown under avatars)' }, { k: 'levels', l: 'Selectable at levels', t: 'multi', opts: optAll(() => cfg.levels, 'name') }, { k: 'blurb', l: 'Description', t: 'textarea' }] },
+      fields: [{ k: 'name', l: 'Name', req: 1 }, { k: 'short', l: 'Short label (shown under avatars)' }, { k: 'levels', l: 'Selectable at levels', t: 'multi', opts: optAll(() => cfg.levels, 'name') }, { k: 'blurb', l: 'Description', t: 'textarea' }, { k: 'more', l: '"Learn more" text — one point per line', t: 'textarea' }] },
     levels: { title: 'Levels', one: 'level', prefix: 'lv', help: 'The work breakdown, listed from the ground up (first = bottom of the pyramid). A new level needs roles and events assigned to it.',
       cols: [['name', 'Name'], ['alias', 'Also known as']],
-      fields: [{ k: 'name', l: 'Name', req: 1 }, { k: 'alias', l: 'Also known as' }, { k: 'blurb', l: 'Description', t: 'textarea' }] },
+      fields: [{ k: 'name', l: 'Name', req: 1 }, { k: 'alias', l: 'Also known as' }, { k: 'blurb', l: 'Description', t: 'textarea' }, { k: 'more', l: '"Learn more" text — one point per line', t: 'textarea' }] },
     events: { title: 'Events', one: 'event', prefix: 'ev', help: 'Agile events in the order they occur across a Planning Interval. A user meets every event that includes their level and has at least one question.',
       cols: [['name', 'Name'], ['levels', 'Levels'], ['cadence', 'Cadence']],
       fields: [{ k: 'name', l: 'Name', req: 1 }, { k: 'cadence', l: 'Cadence' }, { k: 'purpose', l: 'Purpose', t: 'textarea' }, { k: 'levels', l: 'Levels that attend', t: 'multi', opts: optAll(() => cfg.levels, 'name') }, { k: 'keyRoles', l: 'Key roles in the room', t: 'multi', opts: optAll(() => cfg.roles, 'name') }, { k: 'scene', l: 'Illustration', t: 'select', opts: () => G.sceneNames.map(n => [n, n]), def: 'board' }] }
@@ -452,7 +480,24 @@
     const root = $('#modal');
     if (!modal) { root.innerHTML = ''; root.hidden = true; return; }
     let inner;
-    if (modal.kind === 'entity') {
+    if (modal.kind === 'info') {
+      const isLevel = modal.type === 'levels', x = byId(cfg[modal.type], modal.id);
+      if (!x) { modal = null; root.innerHTML = ''; root.hidden = true; return; }
+      const points = String(x.more || '').split('\n').map(t => t.trim()).filter(Boolean);
+      const li = (list, f) => list.map(f).join('');
+      const roles = isLevel ? cfg.roles.filter(r => r.levels.includes(x.id)) : [];
+      const levels = isLevel ? [] : cfg.levels.filter(l => x.levels.includes(l.id));
+      const key = isLevel ? [] : cfg.events.filter(e => e.keyRoles.includes(x.id));
+      const events = isLevel ? cfg.events.filter(e => e.levels.includes(x.id)) : key.length ? key : cfg.events.filter(e => e.levels.some(l => x.levels.includes(l)));
+      inner = `<p class="eyebrow">${isLevel ? 'Work breakdown level' : 'Agile role'}</p><h2>${esc(x.name)}${isLevel && x.alias ? ` <small class="aka">${esc(x.alias)}</small>` : ''}</h2>
+        <p class="lede">${esc(x.blurb || '')}</p>
+        ${points.length ? `<h3>${isLevel ? 'What this level is about' : 'What you do in this role'}</h3><ul class="qs">${li(points, t => `<li>${esc(t)}</li>`)}</ul>` : ''}
+        ${roles.length ? `<h3>Roles you will find here</h3><div class="row wrap">${li(roles, r => `<span class="chip">${esc(r.name)}</span>`)}</div>` : ''}
+        ${levels.length ? `<h3>Where this role sits</h3><div class="row wrap">${li(levels, l => `<span class="chip">${esc(l.name)}</span>`)}</div>` : ''}
+        ${events.length ? `<h3>${isLevel ? 'Events at this level' : key.length ? 'Events where you are a key voice' : 'Events you attend'}</h3><ul class="qs">${li(events, e => `<li><b>${esc(e.name)}</b>${e.cadence ? ' — ' + esc(e.cadence) : ''}</li>`)}</ul>` : ''}
+        <div class="row between info-foot"><button class="ghost" data-act="m-close">Close</button>
+        ${isLevel || x.levels.includes(P().level) ? `<button class="primary" data-act="${isLevel ? 'set-level' : 'set-role'}" data-id="${esc(x.id)}">Choose this ${isLevel ? 'level' : 'role'}</button>` : ''}</div>`;
+    } else if (modal.kind === 'entity') {
       const sc = SCHEMA[modal.type], d = modal.draft;
       inner = `<h2>${modal.isNew ? 'Add' : 'Edit'} ${sc.one}</h2><form data-form="entity">${sc.fields.map(f => fieldHtml(f, d[f.k] === undefined ? f.def : d[f.k])).join('')}
         <div class="row between"><button type="button" class="ghost" data-act="m-close">Cancel</button><button class="primary">Save</button></div></form>`;
@@ -555,11 +600,14 @@
       if (P().portfolio !== el.dataset.id) P().scenario = null;
       P().portfolio = el.dataset.id; go('setup', 1);
     },
+    learn(el) { modal = { kind: 'info', type: el.dataset.kind, id: el.dataset.id }; renderModal(); },
     'set-level'(el) {
+      modal = null; renderModal();
       if (P().level !== el.dataset.id) P().role = null;
       P().level = el.dataset.id; go('setup', 2);
     },
     'set-role'(el) {
+      modal = null; renderModal();
       P().role = el.dataset.id;
       const list = scenariosFor(P().portfolio);
       if (!byId(list, P().scenario)) P().scenario = list[0] ? list[0].id : null;

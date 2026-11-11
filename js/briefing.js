@@ -154,7 +154,7 @@
       sentences.forEach((text, k) => {
         const u = new SpeechSynthesisUtterance(text.trim());
         if (voice) { u.voice = voice; u.lang = voice.lang; } else u.lang = 'en-GB';
-        u.rate = 0.78; u.pitch = 0.7; u.volume = 1;
+        u.rate = 0.92; u.pitch = 0.75; u.volume = 1;
         u.onstart = () => { if (my !== session) return; started = true; speaking = true; idx = Math.max(idx, starts[k]); cap = starts[k] + text.length; };
         u.onboundary = e => { if (my === session && e.charIndex != null) idx = Math.max(idx, Math.min(cap, starts[k] + e.charIndex)); };
         const last = k === sentences.length - 1;
@@ -172,7 +172,7 @@
     let carry = 0;
     timer = setInterval(() => {
       if (my !== session) return clearInterval(timer);
-      carry += (speaking ? 12.5 : 32) * 0.03;           // characters per 30 ms tick
+      carry += (speaking ? 15 : 42) * 0.03;           // characters per 30 ms tick
       const step = Math.floor(carry); carry -= step;
       idx = Math.min(cap, idx + step);
       paint();
