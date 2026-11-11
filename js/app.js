@@ -97,8 +97,9 @@
       ans.picks = $$('.opt.on').map(el => +el.dataset.i);
       if (!ans.picks.length) return;
       // A first answer that is not the recommended one earns a second attempt.
-      if (!run.retry && !isCorrect(q, ans.picks)) { run.retry = { picks: ans.picks }; return render(); }
+      if (!run.retry && !isCorrect(q, ans.picks)) { run.retry = { picks: ans.picks }; B.sfx('retry'); return render(); }
       if (run.retry) { ans.first = run.retry.picks; ans.attempts = 2; run.retry = null; }
+      B.sfx(!isCorrect(q, ans.picks) ? 'wrong' : ans.attempts === 2 ? 'partial' : 'right');
       ans.picks.forEach(i => cfg.metrics.forEach(m => { ans.delta[m.id] += +q.options[i].impact[m.id] || 0; }));
       if (ans.attempts === 2) cfg.metrics.forEach(m => { if (ans.delta[m.id] > 0) ans.delta[m.id] = Math.round(ans.delta[m.id] / 2); });
       cfg.metrics.forEach(m => { ans.delta[m.id] = clamp(ans.delta[m.id], -20, 20); });
@@ -138,6 +139,7 @@
       <nav>
         ${S.view !== 'home' ? '<button class="ghost" data-act="home">Home</button>' : ''}
         <button class="ghost" data-act="admin">Admin</button>
+        <button class="ghost" data-act="brief-sound" aria-pressed="${B.enabled}" aria-label="Turn sound ${B.enabled ? 'off' : 'on'}">Sound ${B.enabled ? 'on' : 'off'}</button>
         <button class="ghost" data-act="theme" aria-label="Switch between light and dark theme">Theme</button>
       </nav></header>`;
   }
@@ -592,9 +594,9 @@
     resume() { go('play'); },
     step(el) { go('setup', clamp(+el.dataset.id, 0, 3)); playBrief(); },
     'brief-play'() { playBrief(); },
-    'brief-sound'(el) {
-      const on = B.toggle(); el.textContent = 'Sound: ' + (on ? 'on' : 'off'); el.setAttribute('aria-pressed', on);
-      if (on) playBrief(); else toast('Sound off — the briefing will type silently.');
+    'brief-sound'() {
+      const on = B.toggle(); render();
+      if (on) { B.sfx('partial'); playBrief(); } else toast('Sound off.');
     },
     'set-portfolio'(el) {
       if (P().portfolio !== el.dataset.id) P().scenario = null;

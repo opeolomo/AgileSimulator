@@ -180,8 +180,39 @@
     }, 30);
   }
 
+  /* ── answer sound effects ── */
+  let fx = null;
+  function sfx(kind) {
+    if (!on || !AC) return;
+    try {
+      if (!fx || fx.state === 'closed') fx = new AC();
+      if (fx.state === 'suspended' && fx.resume) fx.resume().catch(() => {});
+    } catch (e) { return; }
+    const t0 = fx.currentTime + 0.02;
+    const note = (freq, at, dur, type, level, slideTo) => {
+      const o = fx.createOscillator(), g = fx.createGain();
+      o.type = type; o.frequency.setValueAtTime(freq, t0 + at);
+      if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t0 + at + dur);
+      g.gain.setValueAtTime(0.0001, t0 + at);
+      g.gain.exponentialRampToValueAtTime(level, t0 + at + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + at + dur);
+      o.connect(g); g.connect(fx.destination);
+      o.start(t0 + at); o.stop(t0 + at + dur + 0.05);
+    };
+    if (kind === 'right') {                 // bright rising arpeggio with a shimmer on top
+      [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => note(f, i * 0.09, 0.5, 'triangle', 0.22));
+      note(2093, 0.27, 0.6, 'sine', 0.06);
+    } else if (kind === 'partial') {        // softer two-note confirmation
+      note(523.25, 0, 0.3, 'triangle', 0.18); note(783.99, 0.12, 0.45, 'triangle', 0.18);
+    } else if (kind === 'retry') {          // gentle "try again" double knock
+      note(330, 0, 0.16, 'sine', 0.22); note(262, 0.18, 0.26, 'sine', 0.22);
+    } else if (kind === 'wrong') {          // low falling buzz
+      note(196, 0, 0.5, 'sawtooth', 0.12, 98); note(185, 0, 0.5, 'square', 0.05, 92);
+    }
+  }
+
   window.AS_BRIEF = {
-    start, stop,
+    start, stop, sfx,
     get enabled() { return on; },
     toggle() { on = !on; try { localStorage.setItem(KEY, on ? 'on' : 'off'); } catch (e) { /* ignore */ } if (!on) stop(); return on; },
     supported: { voice: !!synth, music: !!AC }
