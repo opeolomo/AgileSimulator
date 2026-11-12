@@ -4,7 +4,7 @@
 (function () {
   const D = window.AS_DEFAULTS;
   const add = (scenario, tag, rows) => rows.forEach((r, n) => D.questions.push({
-    id: 'x-' + tag + '-' + (n + 1), scenario, event: r[0], levels: [], type: 'single', prompt: r[1],
+    id: 'x-' + tag + '-' + (n + 1), scenario, event: r[0], levels: [], roles: [], type: 'single', prompt: r[1],
     options: r.slice(2).map(o => ({ text: o[0], impact: { v: o[1][0], f: o[1][1], r: o[1][2], m: o[1][3] }, feedback: o[2] }))
   }));
 

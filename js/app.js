@@ -34,7 +34,7 @@
     c.roles.forEach(r => { r.levels = r.levels || []; });
     c.events.forEach(e => { e.levels = e.levels || []; e.keyRoles = e.keyRoles || []; });
     c.questions.forEach(q => {
-      q.levels = q.levels || []; q.type = q.type || 'single';
+      q.levels = q.levels || []; q.roles = q.roles || []; q.type = q.type || 'single';
       q.options = (q.options || []).map(o => ({ text: o.text || '', feedback: o.feedback || '', impact: Object.assign({}, o.impact) }));
     });
     return c;
@@ -51,11 +51,11 @@
     role: byId(cfg.roles, P().role), scenario: byId(cfg.scenarios, P().scenario)
   });
   const scenariosFor = pid => cfg.scenarios.filter(s => s.active !== false && (s.portfolio === '*' || s.portfolio === pid));
-  function buildQueue(scenarioId, levelId) {
+  function buildQueue(scenarioId, levelId, roleId) {
     const out = [];
     cfg.events.filter(e => e.levels.includes(levelId)).forEach(e => {
       cfg.questions.filter(q => q.event === e.id && (q.scenario === '*' || q.scenario === scenarioId) &&
-        (!q.levels.length || q.levels.includes(levelId))).forEach(q => out.push({ e: e.id, q: q.id }));
+        (!q.levels.length || q.levels.includes(levelId)) && (!q.roles.length || q.roles.includes(roleId))).forEach(q => out.push({ e: e.id, q: q.id }));
     });
     return out;
   }
@@ -74,7 +74,7 @@
     return good.length === picks.length && good.every(i => picks.includes(i));
   }
   function startRun() {
-    const queue = buildQueue(P().scenario, P().level);
+    const queue = buildQueue(P().scenario, P().level, P().role);
     if (!queue.length) return toast('No questions are configured for this combination yet.');
     const metrics = {}; cfg.metrics.forEach(m => { metrics[m.id] = 50; });
     // Shuffle the answer order for every question, afresh on each run.
@@ -203,7 +203,7 @@
           <button class="mini more" data-act="learn" data-kind="roles" data-id="${esc(r.id)}" aria-label="Learn more about ${esc(r.name)}">Learn more</button></div>`).join('') || '<p class="empty">No roles are configured for this level yet.</p>'}</div>`;
     } else {
       const list = scenariosFor(P().portfolio);
-      const queue = s.scenario ? buildQueue(s.scenario.id, P().level) : [];
+      const queue = s.scenario ? buildQueue(s.scenario.id, P().level, P().role) : [];
       const evs = cfg.events.filter(e => queue.some(x => x.e === e.id));
       body = `<h2>Choose your scenario</h2>
         <div class="grid cards two">${list.map(sc => `<button class="pick ${sc.id === P().scenario ? 'on' : ''}" data-act="set-scenario" data-id="${esc(sc.id)}">
@@ -317,6 +317,7 @@
         </article>
         <article class="qcard card">
           <p class="eyebrow">Decision ${run.idx + 1} of ${run.queue.length}${inEvent.length > 1 ? ` · ${qi + 1}/${inEvent.length} in this event` : ''}${q.type === 'multi' ? ' · select all that apply' : ''}</p>
+          ${q.roles.length ? `<p class="role-tag">For you as ${esc(s.role.name)}</p>` : ''}
           <h3 class="prompt">${fill(q.prompt)}</h3>
           ${body}
           <div class="row between">
@@ -444,9 +445,9 @@
         <label class="field inline"><span>Event</span><select data-filter="fEvent">${o(cfg.events, 'name', A.fEvent, '<option value="">Any</option>')}</select></label></div>
       <button class="primary" data-act="q-new">Add question</button></div>
       <p class="sub">${rows.length} of ${cfg.questions.length} questions. Use {client}, {initiative} and {portfolio} in text to personalise shared questions.</p>
-      <div class="table-wrap"><table><thead><tr><th>Question</th><th>Scenario</th><th>Event</th><th>Type</th><th></th></tr></thead><tbody>
-      ${rows.map(q => `<tr><td>${esc(q.prompt.length > 110 ? q.prompt.slice(0, 110) + '…' : q.prompt)}</td><td>${esc(nameOf(cfg.scenarios, q.scenario, 'title', 'All scenarios'))}</td><td>${esc(nameOf(cfg.events, q.event, 'name'))}</td><td>${q.type === 'multi' ? 'Multi-select' : q.type === 'text' ? 'Free text' : 'Single choice'}</td>
-        <td class="acts"><button class="mini" data-act="q-edit" data-id="${esc(q.id)}">Edit</button><button class="mini danger" data-act="q-del" data-id="${esc(q.id)}">Delete</button></td></tr>`).join('') || '<tr><td colspan="5" class="empty">No questions match.</td></tr>'}
+      <div class="table-wrap"><table><thead><tr><th>Question</th><th>Scenario</th><th>Event</th><th>For</th><th>Type</th><th></th></tr></thead><tbody>
+      ${rows.map(q => `<tr><td>${esc(q.prompt.length > 110 ? q.prompt.slice(0, 110) + '…' : q.prompt)}</td><td>${esc(nameOf(cfg.scenarios, q.scenario, 'title', 'All scenarios'))}</td><td>${esc(nameOf(cfg.events, q.event, 'name'))}</td><td>${q.roles.length ? q.roles.map(id => { const r = byId(cfg.roles, id); return esc(r ? r.short || r.name : '—'); }).join(', ') : 'Everyone'}</td><td>${q.type === 'multi' ? 'Multi-select' : q.type === 'text' ? 'Free text' : 'Single choice'}</td>
+        <td class="acts"><button class="mini" data-act="q-edit" data-id="${esc(q.id)}">Edit</button><button class="mini danger" data-act="q-del" data-id="${esc(q.id)}">Delete</button></td></tr>`).join('') || '<tr><td colspan="6" class="empty">No questions match.</td></tr>'}
       </tbody></table></div>`;
   }
   function adminSettings() {
@@ -513,6 +514,7 @@
           ${fieldHtml({ k: 'type', l: 'Answer type', t: 'select', opts: () => [['single', 'Single choice (scored)'], ['multi', 'Multi-select (scored)'], ['text', 'Free text (captured in plan)']] }, d.type)}
           ${fieldHtml({ k: 'levels', l: 'Limit to levels (none ticked = everyone at the event)', t: 'multi', opts: () => lv.map(l => [l.id, l.name]) }, d.levels)}
         </div>
+        ${fieldHtml({ k: 'roles', l: 'Limit to roles (none ticked = every role)', t: 'multi', opts: () => cfg.roles.filter(r => !ev || r.levels.some(l => ev.levels.includes(l))).map(r => [r.id, r.name]) }, d.roles)}
         <label class="field"><span>Question</span><textarea name="prompt" rows="3" required>${esc(d.prompt)}</textarea></label>
         ${d.type === 'text' ? '' : `<h3>Answer options</h3><p class="fine">Impact is the change to each measure, from −20 to +20. The option with the highest total is shown as recommended practice.</p>
         ${d.options.map((o, i) => `<div class="optedit" data-opt="${i}">
@@ -539,6 +541,7 @@
     if (!form) return;
     d.scenario = form.elements.scenario.value; d.event = form.elements.event.value; d.type = form.elements.type.value;
     d.levels = $$('input[name="levels"]:checked', form).map(i => i.value);
+    d.roles = $$('input[name="roles"]:checked', form).map(i => i.value);
     d.prompt = form.elements.prompt.value.trim();
     $$('.optedit', form).forEach(el => {
       const o = d.options[+el.dataset.opt];
@@ -558,7 +561,7 @@
     if (qs.length) cfg.questions = cfg.questions.filter(q => !qs.includes(q));
     if (type === 'portfolios') cfg.scenarios.forEach(s => { if (s.portfolio === id) s.portfolio = '*'; });
     if (type === 'levels') { cfg.roles.concat(cfg.events, cfg.questions).forEach(x => { x.levels = x.levels.filter(l => l !== id); }); }
-    if (type === 'roles') cfg.events.forEach(e => { e.keyRoles = e.keyRoles.filter(r => r !== id); });
+    if (type === 'roles') { cfg.events.forEach(e => { e.keyRoles = e.keyRoles.filter(r => r !== id); }); cfg.questions.forEach(q => { q.roles = q.roles.filter(r => r !== id); }); }
     saveCfg(); render();
   }
   function download(name, text, type) {
@@ -642,7 +645,7 @@
     },
     'q-new'() {
       const A = S.admin;
-      modal = { kind: 'question', isNew: true, draft: { id: uid('q'), scenario: A.fScenario || '*', event: A.fEvent || (cfg.events[0] || {}).id, levels: [], type: 'single', prompt: '', options: [blankOption(), blankOption(), blankOption()] } };
+      modal = { kind: 'question', isNew: true, draft: { id: uid('q'), scenario: A.fScenario || '*', event: A.fEvent || (cfg.events[0] || {}).id, levels: [], roles: [], type: 'single', prompt: '', options: [blankOption(), blankOption(), blankOption()] } };
       renderModal();
     },
     'q-edit'(el) {

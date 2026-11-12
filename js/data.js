@@ -5,7 +5,7 @@
   const o = (text, i, feedback) => ({ text, impact: { v: i[0], f: i[1], r: i[2], m: i[3] }, feedback });
   let n = 0;
   const q = (scenario, event, prompt, options, extra) =>
-    Object.assign({ id: 'q' + ++n, scenario, event, levels: [], type: 'single', prompt, options }, extra || {});
+    Object.assign({ id: 'q' + ++n, scenario, event, levels: [], roles: [], type: 'single', prompt, options }, extra || {});
 
   window.AS_DEFAULTS = {
     version: 1,
