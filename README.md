@@ -20,7 +20,7 @@ No build step and no dependencies.
 | Scenarios | Fictional client scenarios for every portfolio (two for Digital Assets), plus a shared question bank (211 questions in total; each scenario has 13 of its own and each role has 3 of its own) |
 | Debrief | Overall score, the four measures, a printable plan and decision log, and retrospective prompts |
 
-Each participant meets only the events their level attends. Questions can be single choice, multi-select or free text (captured in the plan).
+Each participant meets only the events their level attends. On the mission briefing they choose a run length: Short (about 10 decisions), Standard (about 16) or Full (every question). Shorter runs sample evenly across events and differ each time; admins set the default under *Settings & data*. Questions can be single choice, multi-select or free text (captured in the plan).
 
 ## Admin module
 

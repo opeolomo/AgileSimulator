@@ -59,6 +59,34 @@
     });
     return out;
   }
+  /* Run length: a shorter run samples questions evenly across the events, mixing
+     role, mission and shared questions, and picks a different sample each time. */
+  const LENGTHS = [
+    { id: 'short', name: 'Short', target: 10 },
+    { id: 'standard', name: 'Standard', target: 16 },
+    { id: 'full', name: 'Full', target: Infinity }
+  ];
+  const lengthOf = () => byId(LENGTHS, P().length) || byId(LENGTHS, cfg.runLength) || LENGTHS[2];
+  const runSize = (pool, len) => Math.min(pool.length, Math.max(len.target, new Set(pool.map(x => x.e)).size));
+  function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+  function sampleQueue(pool, len) {
+    const size = runSize(pool, len);
+    if (size >= pool.length) return pool;
+    const events = []; const by = {};
+    pool.forEach((x, i) => {
+      if (!by[x.e]) { by[x.e] = [[], [], []]; events.push(x.e); }
+      const q = byId(cfg.questions, x.q);
+      by[x.e][q.roles.length ? 0 : q.scenario !== '*' ? 1 : 2].push(i);     // role, mission, shared
+    });
+    const lines = events.map(e => {
+      const groups = shuffle(by[e].map(shuffle)), line = [];
+      for (let k = 0; groups.some(g => g.length > k); k++) groups.forEach(g => { if (g.length > k) line.push(g[k]); });
+      return line;
+    });
+    const chosen = [];
+    for (let k = 0; chosen.length < size; k++) for (const line of lines) { if (line.length > k && chosen.length < size) chosen.push(line[k]); }
+    return chosen.sort((a, b) => a - b).map(i => pool[i]);
+  }
   function fill(text) {
     const s = sel();
     return esc(text)
@@ -74,7 +102,7 @@
     return good.length === picks.length && good.every(i => picks.includes(i));
   }
   function startRun() {
-    const queue = buildQueue(P().scenario, P().level, P().role);
+    const queue = sampleQueue(buildQueue(P().scenario, P().level, P().role), lengthOf());
     if (!queue.length) return toast('No questions are configured for this combination yet.');
     const metrics = {}; cfg.metrics.forEach(m => { metrics[m.id] = 50; });
     // Shuffle the answer order for every question, afresh on each run.
@@ -215,7 +243,8 @@
           <p id="brief-accept" class="accept">${ACCEPT}</p>
           <div class="row wrap brief-ctl"><button class="mini" data-act="brief-play">▶ Replay briefing</button>
             <button class="mini" data-act="brief-sound" aria-pressed="${B.enabled}">Sound: ${B.enabled ? 'on' : 'off'}</button></div>
-          <h4>Your itinerary — ${evs.length} events, ${queue.length} decisions</h4>
+          <div class="row wrap runlen"><span>Run length</span>${LENGTHS.map(l => `<button class="mini ${l.id === lengthOf().id ? 'on' : ''}" data-act="set-length" data-id="${l.id}" data-n="${runSize(queue, l)}" aria-pressed="${l.id === lengthOf().id}">${l.name} · ${runSize(queue, l)}</button>`).join('')}</div>
+          <h4>Your itinerary — ${evs.length} events, <span id="run-n">${runSize(queue, lengthOf())}</span> decisions</h4>
           <ol class="itinerary">${evs.map(e => `<li><b>${esc(e.name)}</b><small>${esc(e.cadence || '')}</small></li>`).join('')}</ol>
           <button class="primary big" data-act="start" ${queue.length ? '' : 'disabled'}>Board the train</button>
           ${queue.length ? '' : '<p class="empty">No questions are configured for this level and scenario.</p>'}
@@ -460,7 +489,9 @@
         <p class="fine">${customised ? 'This browser is using locally edited content.' : 'This browser is using the published content.'}</p>
         <h3>Reset</h3><p class="sub">Discard local edits and return to the published content.</p>
         <button class="ghost danger" data-act="a-reset">Reset content</button></div>
-      <div><h3>Admin PIN</h3>
+      <div><h3>Default run length</h3>
+        <label class="field"><span>Pre-selected on the mission briefing; participants can still change it</span><select data-setting="runLength">${LENGTHS.map(l => `<option value="${l.id}" ${l.id === (cfg.runLength || 'full') ? 'selected' : ''}>${l.name}${l.target === Infinity ? ' — every question' : ' — about ' + l.target + ' decisions'}</option>`).join('')}</select></label>
+        <h3>Admin PIN</h3>
         <form data-form="newpin"><label class="field"><span>New PIN</span><input type="password" name="pin" minlength="4" required autocomplete="off"></label><button class="primary">Change PIN</button></form>
         <p class="fine">The PIN is stored with the configuration in plain form and only deters casual changes.</p></div></div>
       <h3>Session results on this device <small>(${hist.length})</small></h3>
@@ -619,6 +650,11 @@
       go('setup', 3); playBrief();
     },
     'set-scenario'(el) { P().scenario = el.dataset.id; render(); playBrief(); },
+    'set-length'(el) {      // updated in place so the briefing keeps playing
+      P().length = el.dataset.id; store.set(KEY.ses, S, sessionStorage);
+      $$('[data-act="set-length"]').forEach(b => { b.classList.toggle('on', b === el); b.setAttribute('aria-pressed', b === el); });
+      $('#run-n').textContent = el.dataset.n;
+    },
     start() { startRun(); },
     pick(el) {
       if (el.dataset.multi) el.classList.toggle('on');
@@ -689,6 +725,7 @@
   document.addEventListener('change', e => {
     const t = e.target;
     if (t.dataset.filter) { S.admin[t.dataset.filter] = t.value; render(); }
+    if (t.dataset.setting === 'runLength') { cfg.runLength = t.value; saveCfg(); toast('Default run length saved.'); }
     if (modal && modal.kind === 'question' && (t.name === 'type' || t.name === 'event')) { syncQuestionDraft(); renderModal(); }
     if (t.matches('[data-import]') && t.files[0]) {
       const reader = new FileReader();

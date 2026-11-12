@@ -109,6 +109,8 @@ label.btn { cursor: pointer; }
 .typing::after { content: "\258C"; margin-left: 2px; color: var(--accent); animation: blink .8s steps(2) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
 .brief-ctl { margin-bottom: 6px; }
+.runlen { margin: 6px 0 2px; } .runlen > span { font-size: .82rem; font-weight: 600; color: var(--muted); }
+.runlen .mini.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .primary.ready { animation: beckon 1.6s ease-in-out infinite; }
 @keyframes beckon { 50% { box-shadow: 0 0 0 10px color-mix(in srgb, var(--accent) 0%, transparent); } 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); } }
 .itinerary { margin: 0 0 14px; padding-left: 22px; display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 4px 28px; }
