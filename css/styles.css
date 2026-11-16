@@ -109,6 +109,7 @@ label.btn { cursor: pointer; }
 .typing::after { content: "\258C"; margin-left: 2px; color: var(--accent); animation: blink .8s steps(2) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
 .brief-ctl { margin-bottom: 6px; }
+.group { margin: 10px 0 -4px; } .count { color: var(--accent) !important; font-weight: 700; margin-top: 2px; }
 .runlen { margin: 6px 0 2px; } .runlen > span { font-size: .82rem; font-weight: 600; color: var(--muted); }
 .runlen .mini.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .primary.ready { animation: beckon 1.6s ease-in-out infinite; }

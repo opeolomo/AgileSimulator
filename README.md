@@ -17,10 +17,14 @@ No build step and no dependencies.
 | Work breakdown | Team, Team of Teams (ART), Value Stream (Solution Train), Portfolio, ExCo |
 | Roles | 22 roles, filtered by level — Scrum Master, Product Owner, RTE, Product Manager, Epic Owner, Executive Sponsor and more |
 | Events | 15 events across a Planning Interval, from Strategy & OKR Alignment through PI Planning, team events, System and Solution Demos to Inspect & Adapt |
-| Scenarios | Fictional client scenarios for every portfolio (two for Digital Assets), plus a shared question bank (211 questions in total; each scenario has 13 of its own and each role has 3 of its own) |
+| Scenarios | Fictional client scenarios for every portfolio (two for Digital Assets), plus a shared question bank (211 questions in total; each scenario has 13 of its own and each role has 3 of its own), plus 89 deep-dive questions |
 | Debrief | Overall score, the four measures, a printable plan and decision log, and retrospective prompts |
 
 Each participant meets only the events their level attends. On the mission briefing they choose a run length: Short (about 10 decisions), Standard (about 16) or Full (every question). Shorter runs sample evenly across events and differ each time; admins set the default under *Settings & data*. Questions can be single choice, multi-select or free text (captured in the plan).
+
+## Deep dives
+
+Besides missions, **Learn a role or event** on the home page offers a deep dive into any single role or event, with no mission or client. Each card opens a short explanation and then a set of practice decisions: five per role and four to seven per event. Admins can mark a question "Deep dives only" in the question editor.
 
 ## Admin module
 
@@ -45,6 +49,7 @@ css/styles.css    styling, light and dark themes, print layout
 js/data.js        default content (portfolios, roles, events, scenarios, questions)
 js/data-scenarios.js  ten further scenario-specific questions per scenario
 js/data-roles.js  three role-specific questions for each role
+js/data-learn.js  deep-dive questions for learning a role or an event
 js/graphics.js    SVG icons and event-room illustrations
 js/briefing.js    mission-briefing sound, voice read-out and typewriter text
 js/app.js         simulation flow, scoring, debrief and admin module
